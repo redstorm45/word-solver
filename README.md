@@ -15,7 +15,7 @@ Also, it is fun to design something efficient.
 
  - Download python 3.7
  - Download the source from github
- - Place a `dico.txt` file next to the other files, see (#getting-a-word-list)
+ - Place a `dico.txt` file next to the other files, see [Getting a word list](#getting-a-word-list)
  - Run `main.py`
 
 # Getting a word list
