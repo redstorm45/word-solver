@@ -13,6 +13,7 @@ class Prog:
         self.thread = None
         self.stopping = True
         self.stopped = True
+        self.loaded = False
 
         self.cb_progress = None
         self.cb_options = None
@@ -25,6 +26,8 @@ class Prog:
         self._launch(target=self._load)
 
     def launch_compute(self, letters):
+        if not self.loaded:
+            return
         self._launch(target=lambda:self._compute(letters))
 
     def _launch(self, target):
@@ -53,6 +56,7 @@ class Prog:
         self.matcher.set_dict(W, self.cb_progress, cb_stop)
         if self.cb_progress is not None:
             self.cb_progress(100, 100)
+        self.loaded = True
         print('complete')
 
     def _compute(self, letters):
