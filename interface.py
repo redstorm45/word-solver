@@ -154,11 +154,11 @@ class LetterBar(LetterCanvas):
         print("key press: '{}'".format(event.char))
         if self.selected is None:
             return
-        if event.char in ALPHABET or event.char == ' ':
+        if (event.char in ALPHABET or event.char == ' ') and len(event.char)>0:
             self.string[self.selected] = event.char
             if self.selected < 6:
                 self.selected += 1
-        self.update_letters()
+            self.update_letters()
 
     def on_back(self, event):
         print("key press: '{}'".format(event.char))
