@@ -218,7 +218,7 @@ class MultiOptionDisplay(LetterCanvas):
         for full_opt in self.current_options:
             self.itemconfigure(full_opt[1][0], state='hidden')
 
-class OptionSelector2(tk.Frame):
+class OptionSelector(tk.Frame):
     def __init__(self, parent, cb_select):
         tk.Frame.__init__(self, parent)
         self.scrollbar = ttk.Scrollbar(self, orient=tk.VERTICAL)
@@ -276,7 +276,7 @@ class GraphicalInterface(Interface):
         self.clear_button = tk.Button(self.search_bar, text="Clear", command=self.handle_clear)
         self.clear_button.pack(side=tk.LEFT)
 
-        self.selector = OptionSelector2(self.root, self.handle_select)
+        self.selector = OptionSelector(self.root, self.handle_select)
         self.selector.grid(column=1, row=0, columnspan=2, sticky=tk.N+tk.S+tk.E+tk.W, padx=10, pady=10)
         self.root.bind("<Button-4>", self.handle_mousewheel)
         self.root.bind("<Button-5>", self.handle_mousewheel)
