@@ -8,15 +8,18 @@ class Interface:
     def __init__(self, board):
         pass
         
+        
 class ConsoleInterface(Interface):
     def __init__(self):
         pass
+
 
 def coord_add(p1, p2):
     return p1[0]+p2[0], p1[1]+p2[1]
 
 def coord_rotate(p):
     return -p[1], p[0]
+
 
 class LetterCanvas(tk.Canvas):
     def __init__(self, parent, **kwargs):
@@ -41,6 +44,7 @@ class LetterCanvas(tk.Canvas):
             i2 = self.create_text(x+10, y+10, text=letter.upper(), state='disabled', font=('Helvetica', '10', 'bold'))
             L = [i1, i2]
         return L
+
 
 class CanvasBoard(LetterCanvas):
     def __init__(self, parent, board):
@@ -109,6 +113,7 @@ class CanvasBoard(LetterCanvas):
             if opt.main_pattern[k] != '_':
                 i,j = move_dir(opt.start, opt.direction, k)
                 self.temp_letters += self.draw_letter(10+30*j, 10+30*i, opt.main_pattern[k], full=False, joker=opt.main_jokers[k])
+
 
 class LetterBar(LetterCanvas):
     def __init__(self, parent):
@@ -179,6 +184,7 @@ class LetterBar(LetterCanvas):
         self.string = current + ['.' for i in range(7-len(current))]
         self.update_letters()
 
+
 class MultiOptionDisplay(LetterCanvas):
     def __init__(self, parent, cb_select, **kwargs):
         LetterCanvas.__init__(self, parent, width=350, height=0, **kwargs)
@@ -218,6 +224,7 @@ class MultiOptionDisplay(LetterCanvas):
         for full_opt in self.current_options:
             self.itemconfigure(full_opt[1][0], state='hidden')
 
+
 class OptionSelector(tk.Frame):
     def __init__(self, parent, cb_select):
         tk.Frame.__init__(self, parent)
@@ -251,6 +258,56 @@ class OptionSelector(tk.Frame):
         self.selected = opt
         self.cb_select(opt)
 
+
+class QuickOptionSelector(tk.Button):
+    def __init__(self, parent, *args, **kwargs):
+        self.option_list = []
+        self.option_widgets = []
+        self.active = False
+        if 'options' in kwargs.keys():
+            self.option_list = kwargs['options']
+            del kwargs['options']
+        kwargs['command'] = self.show_options
+        tk.Button.__init__(self, parent, *args, **kwargs)
+        self.make_subframe()
+    
+    def configure(self, *args, **kwargs):
+        if 'options' in kwargs.keys():
+            self.option_list = kwargs['options']
+            self.make_subframe()
+            del kwargs['options']
+        kwargs['command'] = self.show_options
+        tk.Button.configure(self, *args, **kwargs)
+        
+    def make_subframe(self):
+        self.subframe = tk.Frame(self.master, borderwidth=2, bg='#e2e3e4')
+        self.subframe_grower = tk.Frame(self.subframe, width=100, height=0)
+        self.subframe_grower.pack()
+        self.option_widgets = []
+        for opt, cb in self.option_list:
+            bt = tk.Label(self.subframe, text=opt, anchor=tk.W, bg='#f2f3f4')
+            bt.pack(fill=tk.X)
+            self.option_widgets.append(bt)
+        def set_active(e):
+            self.active = True 
+        def set_inactive(e):
+            self.active = False
+            self.after(100, self.check_active)
+        self.subframe.bind('<Enter>', set_active)
+        self.subframe.bind('<Leave>', set_inactive)
+        self.bind('<Enter>', set_active)
+        self.bind('<Leave>', set_inactive)
+        
+    def show_options(self):
+        self.configure(relief=tk.SUNKEN)
+        self.subframe.place(anchor="sw", x=self.winfo_x(), y=self.winfo_y())
+        
+    def check_active(self):
+        if not self.active and self.subframe.winfo_ismapped():
+            self.subframe.place_forget()
+            self.configure(relief=tk.RAISED)
+
+
 class GraphicalInterface(Interface):
     def __init__(self, prog):
         self.prog = prog
@@ -277,14 +334,20 @@ class GraphicalInterface(Interface):
         self.clear_button.pack(side=tk.LEFT)
 
         self.selector = OptionSelector(self.root, self.handle_select)
-        self.selector.grid(column=1, row=0, columnspan=2, sticky=tk.N+tk.S+tk.E+tk.W, padx=10, pady=10)
+        self.selector.grid(column=1, row=0, columnspan=4, sticky=tk.N+tk.S+tk.E+tk.W, padx=10, pady=10)
         self.root.bind("<Button-4>", self.handle_mousewheel)
         self.root.bind("<Button-5>", self.handle_mousewheel)
 
         self.place_button = tk.Button(self.root, text="Place", command=self.handle_place)
         self.place_button.grid(column=1, row=1)
+        self.import_board_button = QuickOptionSelector(self.root, text="Import board", options=[
+            ("Csv/Excel", self.handle_import_csv_board)])
+        self.import_board_button.grid(column=2, row=1)
+        self.export_board_button = QuickOptionSelector(self.root, text="Export board", options=[
+            ("Csv/Excel", self.handle_export_csv_board)])
+        self.export_board_button.grid(column=3, row=1)
         self.clear_board_button = tk.Button(self.root, text="Clear board", command=self.handle_clear_board)
-        self.clear_board_button.grid(column=2, row=1)
+        self.clear_board_button.grid(column=4, row=1)
 
         self.status = tk.Frame(self.root)
         self.status.grid(column=0, columnspan=3, row=2)
@@ -361,6 +424,12 @@ class GraphicalInterface(Interface):
             self.canvas_board.update()
             self.letter_bar.remove_used(self.selector.selected)
             self.selector.set_options([])
+            
+    def handle_import_csv_board(self):
+        pass
+            
+    def handle_export_csv_board(self):
+        pass
         
     def run(self):
         self.canvas_board.update()
