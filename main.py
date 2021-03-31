@@ -63,7 +63,7 @@ class Prog:
         if self.cb_options is None:
             return
         if self.cb_progress is not None:
-            self.cb_progress(-1, 1)
+            self.cb_progress(-1, 30)
         self.cb_options([])
         opts = self.solver.get_options(self.board, self.matcher, letters, lambda:self.cb_progress(-1, 1))
         pairs = [(op, self.board.get_score(op)) for op in opts]

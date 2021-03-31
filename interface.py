@@ -1,4 +1,5 @@
 
+import time
 import tkinter as tk
 import tkinter.ttk as ttk
 from board import LETTER_POINTS, move_dir
@@ -364,18 +365,26 @@ class GraphicalInterface(Interface):
         self.progress.pack(side=tk.LEFT)
         
         self.progress_skip = 0
+        self.progress_indeterminate = None
 
     def update_progress(self, pos, total):
         if pos == -1:
-            self.status_label.configure(text="Computing...")
-            self.progress.configure(value=pos, maximum=total, mode='indeterminate')
-            self.progress.step()
+            if self.progress_indeterminate is None:
+                self.status_label.configure(text="Computing...")
+                self.progress.configure(value=1, maximum=total, mode='indeterminate')
+                self.progress_indeterminate = time.time()
+            else:
+                t = time.time()
+                if t-self.progress_indeterminate > 0.2:
+                    self.progress.step(2)
+                    self.progress_indeterminate += 0.2
         else:
             perc = str(100*pos//total)
             if perc == '100':
                 text = "Done"
                 self.status_label.configure(text=text)
                 self.progress.configure(value=pos, maximum=total, mode='determinate')
+                self.progress_indeterminate = None
             else:
                 self.progress_skip += 1
                 if self.progress_skip%20 == 0:
