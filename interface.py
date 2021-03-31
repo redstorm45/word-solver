@@ -299,6 +299,8 @@ class GraphicalInterface(Interface):
         self.progress = ttk.Progressbar(self.status, orient=tk.HORIZONTAL, length=350, mode='determinate')
         self.progress.configure(value=0)
         self.progress.pack(side=tk.LEFT)
+        
+        self.progress_skip = 0
 
     def update_progress(self, pos, total):
         if pos == -1:
@@ -309,10 +311,14 @@ class GraphicalInterface(Interface):
             perc = str(100*pos//total)
             if perc == '100':
                 text = "Done"
+                self.status_label.configure(text=text)
+                self.progress.configure(value=pos, maximum=total, mode='determinate')
             else:
-                text = "Loading ({}%)".format(perc)
-            self.status_label.configure(text=text)
-            self.progress.configure(value=pos, maximum=total, mode='determinate')
+                self.progress_skip += 1
+                if self.progress_skip%20 == 0:
+                    text = "Loading ({}%)".format(perc)
+                    self.status_label.configure(text=text)
+                    self.progress.configure(value=pos, maximum=total, mode='determinate')
 
     def update_options(self, pairs):
         pairs = sorted(pairs, key=lambda p:p[1]+len(p[0])/20, reverse=True)
