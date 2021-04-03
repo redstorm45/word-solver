@@ -10,6 +10,7 @@ class Possibility:
         self.extendable_start = extendable_start
 
 class PatternNode:
+    __slots__ = 'childs'
     def __init__(self):
         self.childs = {}
 

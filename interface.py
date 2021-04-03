@@ -387,7 +387,7 @@ class GraphicalInterface(Interface):
                 self.progress_indeterminate = None
             else:
                 self.progress_skip += 1
-                if self.progress_skip%20 == 0:
+                if self.progress_skip%50 == 0:
                     text = "Loading ({}%)".format(perc)
                     self.status_label.configure(text=text)
                     self.progress.configure(value=pos, maximum=total, mode='determinate')
