@@ -43,7 +43,16 @@ class Prog:
 
     def stop(self):
         self.stopping = True
-        self.thread.join()
+        if self.thread is not None:
+            self.thread.join()
+            
+    def try_stop_compute(self):
+        self.stopping = True
+        if self.stopped:
+            self.thread.join()
+            self.thread = None
+            return True
+        return False
 
     def _load(self):
         def cb_stop():

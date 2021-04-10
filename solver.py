@@ -16,7 +16,8 @@ class Solver:
         while len(incomplete_opts) > 0:
             if cb_step is not None:
                 cb_step()
-            if cb_stop is not None and not cb_stop():
+            if cb_stop is not None and cb_stop():
+                print('breaking out of solve')
                 break
             opt = incomplete_opts.pop(0)
             #print("explore opt:", repr(opt) + str(opt.side_patterns))

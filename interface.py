@@ -366,8 +366,12 @@ class GraphicalInterface(Interface):
         
         self.progress_skip = 0
         self.progress_indeterminate = None
+        self.invalid_board = True
 
     def update_progress(self, pos, total):
+        self.root.after(0, lambda :self._update_progress(pos, total))
+    
+    def _update_progress(self, pos, total):
         if pos == -1:
             if self.progress_indeterminate is None:
                 self.status_label.configure(text="Computing...")
@@ -393,8 +397,11 @@ class GraphicalInterface(Interface):
                     self.progress.configure(value=pos, maximum=total, mode='determinate')
 
     def update_options(self, pairs):
-        pairs = sorted(pairs, key=lambda p:p[1]+len(p[0])/20, reverse=True)
-        self.root.after(0, lambda:self.selector.set_options(pairs))
+        if self.invalid_board:
+            self.root.after(0, lambda:self.selector.set_options([]))
+        else:
+            pairs = sorted(pairs, key=lambda p:p[1]+len(p[0])/20, reverse=True)
+            self.root.after(0, lambda:self.selector.set_options(pairs))
 
     def handle_close(self):
         self.prog.stopping = True
@@ -402,10 +409,19 @@ class GraphicalInterface(Interface):
             self.root.destroy()
         else:
             self.root.after(10, self.handle_close)
+            
+    def handle_try_compute(self, letters):
+        if self.prog.try_stop_compute():
+            self.invalid_board = False
+            self.prog.launch_compute(letters)
+        else:
+            self.root.after(10, lambda:self.handle_try_compute(letters))
 
     def handle_compute(self):
+        if not self.prog.loaded:
+            return
         letters = ''.join(self.letter_bar.string).replace('.','')
-        self.prog.launch_compute(letters)
+        self.handle_try_compute(letters)
 
     def handle_mousewheel(self, event):
         if event.num == 4:
@@ -433,6 +449,9 @@ class GraphicalInterface(Interface):
             self.canvas_board.update()
             self.letter_bar.remove_used(self.selector.selected)
             self.selector.set_options([])
+            
+    def handle_invalidate(self):
+        self.selector.set_options([])
             
     def handle_import_csv_board(self):
         pass
