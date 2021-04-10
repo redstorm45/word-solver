@@ -64,8 +64,11 @@ class Prog:
             return
         if self.cb_progress is not None:
             self.cb_progress(-1, 30)
+        def cb_stop():
+            return self.stopping
         self.cb_options([])
-        opts = self.solver.get_options(self.board, self.matcher, letters, lambda:self.cb_progress(-1, 1))
+        
+        opts = self.solver.get_options(self.board, self.matcher, letters, lambda:self.cb_progress(-1, 1), cb_stop)
         pairs = [(op, self.board.get_score(op)) for op in opts]
         self.cb_options(pairs)
         if self.cb_progress is not None:
