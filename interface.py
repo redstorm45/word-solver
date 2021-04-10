@@ -2,6 +2,7 @@
 import time
 import tkinter as tk
 import tkinter.ttk as ttk
+import tkinter.filedialog as tk_filedialog
 from board import LETTER_POINTS, move_dir
 from words import ALPHABET
 
@@ -365,6 +366,7 @@ class QuickOptionSelector(tk.Button):
         for opt, cb in self.option_list:
             bt = tk.Label(self.subframe, text=opt, anchor=tk.W, bg='#f2f3f4')
             bt.pack(fill=tk.X)
+            bt.bind('<Button-1>', lambda ev:cb())
             self.option_widgets.append(bt)
         def set_active(e):
             self.active = True 
@@ -393,6 +395,10 @@ class GraphicalInterface(Interface):
         self.root = tk.Tk()
         self.root.protocol('WM_DELETE_WINDOW', self.handle_close)
         self.root.title("Scrabble solver")
+        self.root.bind('<Key>', self.on_key)
+        self.root.bind('<BackSpace>', self.on_back)
+        self.root.bind("<Button-4>", self.handle_mousewheel)
+        self.root.bind("<Button-5>", self.handle_mousewheel)
 
         self.canvas_board = CanvasBoard(self.root, self.prog.board)
         self.canvas_board.grid(column=0, row=0)
@@ -403,10 +409,6 @@ class GraphicalInterface(Interface):
         self.letter_bar = LetterBar(self.search_bar)
         self.letter_bar.pack(side=tk.LEFT)
         
-        self.root.bind('<Key>', self.on_key)
-        self.root.bind('<BackSpace>', self.on_back)
-        #self.search_spacer = tk.Frame(self.search_bar, width=50)
-        #self.search_spacer.pack(side=tk.LEFT)
         self.search_button = tk.Button(self.search_bar, text='Go', command=self.handle_compute)
         self.search_button.pack(side=tk.LEFT)
         self.clear_button = tk.Button(self.search_bar, text="Clear", command=self.handle_clear)
@@ -414,16 +416,14 @@ class GraphicalInterface(Interface):
 
         self.selector = OptionSelector(self.root, self.handle_select)
         self.selector.grid(column=1, row=0, columnspan=4, sticky=tk.N+tk.S+tk.E+tk.W, padx=10, pady=10)
-        self.root.bind("<Button-4>", self.handle_mousewheel)
-        self.root.bind("<Button-5>", self.handle_mousewheel)
 
         self.place_button = tk.Button(self.root, text="Place", command=self.handle_place)
         self.place_button.grid(column=1, row=1)
         self.import_board_button = QuickOptionSelector(self.root, text="Import board", options=[
-            ("Csv/Excel", self.handle_import_csv_board)])
+            ("Csv", self.handle_import_csv_board)])
         self.import_board_button.grid(column=2, row=1)
         self.export_board_button = QuickOptionSelector(self.root, text="Export board", options=[
-            ("Csv/Excel", self.handle_export_csv_board)])
+            ("Csv", self.handle_export_csv_board)])
         self.export_board_button.grid(column=3, row=1)
         self.clear_board_button = tk.Button(self.root, text="Clear board", command=self.handle_clear_board)
         self.clear_board_button.grid(column=4, row=1)
@@ -547,11 +547,38 @@ class GraphicalInterface(Interface):
         self.selector.set_options([])
             
     def handle_import_csv_board(self):
-        pass
+        file_ = tk_filedialog.askopenfile(master=self.root, title="Select file to load", filetypes=[('Csv', '.csv')])
+        if file_ is None:
+            return
+        self.prog.board.clear_all()
+        for i,line in enumerate(file_):
+            if i >= self.prog.board.height():
+                break
+            cells = line.strip().split(',')
+            for j,cell in enumerate(cells):
+                if j >= self.prog.board.width():
+                    break
+                if cell.startswith('*'):
+                    self.prog.board.jokers[i][j] = True
+                    cell = cell[1:]
+                if len(cell) > 0:
+                    self.prog.board.front[i][j] = cell
+        self.canvas_board.update()
+        file_.close()
             
     def handle_export_csv_board(self):
-        pass
-        
+        file_ = tk_filedialog.asksaveasfile(master=self.root, title="Select save location", defaultextension='csv', initialfile='board.csv', filetypes=[('Csv', '.csv')])
+        for i in range(self.prog.board.height()):
+            S = ''
+            for j in range(self.prog.board.width()):
+                if self.prog.board.jokers[i][j]:
+                    S += '*'
+                if self.prog.board.front[i][j] is not None:
+                    S += self.prog.board.front[i][j]
+                S += ','
+            file_.write(S[:-1]+'\n')
+        file_.close()
+
     def run(self):
         self.canvas_board.update()
         self.prog.attach_interface(self.update_progress, self.update_options)
