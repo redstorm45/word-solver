@@ -36,16 +36,20 @@ class LetterCanvas(tk.Canvas):
             i4 = self.create_oval(x+1,  y+23, x+6,  y+28, width=0, fill=color)
             i5 = self.create_rectangle(x+1,y+3, x+29, y+27, width=0, fill=color)
             i6 = self.create_rectangle(x+3,y+1, x+27, y+29, width=0, fill=color)
-            i7 = self.create_text(x+15, y+15, text=letter.upper(), state='disabled', font=('Helvetica', '14', 'bold'), fill=text_color)
+            i7 = self.create_text(x+14, y+17, text=letter.upper(), state='disabled', font=('Helvetica', '14', 'bold'), fill=text_color)
             L = [i1, i2, i3, i4, i5, i6, i7]
             if letter != ' ' and not joker:
-                L += [self.create_text(x+23, y+23, text=str(LETTER_POINTS[letter]), state='disabled', font=('Helvetica', '6'), fill=text_color)]
+                L += [self.create_text(x+22, y+24, text=str(LETTER_POINTS[letter]), state='disabled', font=('Helvetica', '6'), fill=text_color)]
         else:
             i1 = self.create_rectangle(x,y, x+20, y+20, width=0, fill=color)
-            i2 = self.create_text(x+10, y+8, text=letter.upper(), state='disabled', font=('Helvetica', '10', 'bold'))
+            i2 = self.create_text(x+10, y+12, text=letter.upper(), state='disabled', font=('Helvetica', '10', 'bold'))
             L = [i1, i2]
         return L
-
+        
+    def draw_highlight(self, x, y):
+        color = '#e3ca2b'
+        i = self.create_rectangle(x, y, x+30, y+30, width=4, dash=(8,), outline=color)
+        return [i]
 
 class CanvasBoard(LetterCanvas):
     def __init__(self, parent, board):
@@ -54,13 +58,30 @@ class CanvasBoard(LetterCanvas):
         self.letters = []
         self.temp_letters = []
         self.displayed_opt = None
+        self.cb_select = None
         self._setup()
+        
+        self.bind('<Button-1>', self.on_click)
+        self.selected = None
+        self.select_tick = False
+        self.select_offset = 0
+        
+    def has_selected(self):
+        return self.selected is not None
+        
+    def deselect(self):
+        if self.selected is not None:
+            self.selected = None
+            self.update()
         
     def to_cv_rect(self, x1, y1, x2, y2):
         return self.to_cv_pos(x1, y1) + self.to_cv_pos(x2, y2)
         
     def to_cv_pos(self, x, y):
         return 10+30*x, 10+30*y
+        
+    def from_cv_pos(self, x, y):
+        return (x-10)//30, (y-10)//30
 
     def _setup(self):
         # board back
@@ -108,6 +129,16 @@ class CanvasBoard(LetterCanvas):
             for j in range(self.board.width()):
                 if self.board.front[i][j] is not None:
                     self.letters += self.draw_letter(*self.to_cv_pos(j, i), self.board.front[i][j], joker=self.board.jokers[i][j])
+                    
+        if self.selected is not None:
+            i,j,index = self.selected
+            L = self.draw_highlight(*self.to_cv_pos(j,i))
+            self.letters += L
+            if index is None:
+                self.selected = (i,j,L[0])
+                if not self.select_tick:
+                    self.after(0, self.on_select_tick)
+                    self.select_tick = True
 
     def display_opt(self, opt):
         for i in self.temp_letters:
@@ -121,6 +152,39 @@ class CanvasBoard(LetterCanvas):
                 i,j = move_dir(opt.start, opt.direction, k)
                 self.temp_letters += self.draw_letter(10+30*j, 10+30*i, opt.main_pattern[k], full=False, joker=opt.main_jokers[k])
 
+    def on_click(self, event):
+        x, y = self.from_cv_pos(event.x, event.y)
+        if x >= 0 and x < self.board.width() and y >= 0 and y < self.board.height():
+            if self.selected is not None and self.selected[:2] == (y,x):
+                self.selected = None
+            else:
+                self.selected = (y,x,None)
+            if self.cb_select is not None:
+                self.cb_select()
+            self.update()
+            
+    def on_select_tick(self):
+        if (not self.select_tick) or self.selected is None:
+            self.select_tick = False
+            return
+        _,_,_id = self.selected
+        if _id is not None:
+            self.select_offset = (self.select_offset +1) % 16
+            self.itemconfig(_id, dashoff=self.select_offset)
+        self.after(50, self.on_select_tick)
+        
+    def on_key(self, event):
+        if self.selected is None:
+            return
+        if event.char in ALPHABET and len(event.char)>0:
+            self.board.place_letter(*self.selected[:2], event.char, False)
+            self.update()
+
+    def on_back(self, event):
+        if self.selected is None:
+            return
+        self.board.remove_letter(*self.selected[:2])
+        self.update()
 
 class LetterBar(LetterCanvas):
     def __init__(self, parent):
@@ -128,10 +192,15 @@ class LetterBar(LetterCanvas):
         self.letters = []
         self.string = ['.']*7
         self.selected = None
+        self.cb_select = None
         self._setup()
         self.update_letters()
 
         self.bind('<Button-1>', self.on_click)
+        
+    def deselect(self):
+        self.selected = None
+        self.update_letters()
 
     def _setup(self):
         self.create_rectangle(5, 20, 295, 40, fill='#03330b', width=0)
@@ -160,6 +229,8 @@ class LetterBar(LetterCanvas):
                 self.selected = k
         else:
             self.selected = None
+        if self.cb_select is not None:
+            self.cb_select()
         self.update_letters()
 
     def on_key(self, event):
@@ -331,8 +402,9 @@ class GraphicalInterface(Interface):
 
         self.letter_bar = LetterBar(self.search_bar)
         self.letter_bar.pack(side=tk.LEFT)
-        self.root.bind('<Key>', self.letter_bar.on_key)
-        self.root.bind('<BackSpace>', self.letter_bar.on_back)
+        
+        self.root.bind('<Key>', self.on_key)
+        self.root.bind('<BackSpace>', self.on_back)
         #self.search_spacer = tk.Frame(self.search_bar, width=50)
         #self.search_spacer.pack(side=tk.LEFT)
         self.search_button = tk.Button(self.search_bar, text='Go', command=self.handle_compute)
@@ -369,6 +441,9 @@ class GraphicalInterface(Interface):
         self.progress = ttk.Progressbar(self.status, orient=tk.HORIZONTAL, length=350, mode='determinate')
         self.progress.configure(value=0)
         self.progress.pack(side=tk.LEFT)
+        
+        self.canvas_board.cb_select = self.letter_bar.deselect
+        self.letter_bar.cb_select = self.canvas_board.deselect
         
         self.progress_skip = 0
         self.progress_indeterminate = None
@@ -408,6 +483,18 @@ class GraphicalInterface(Interface):
         else:
             pairs = sorted(pairs, key=lambda p:p[1]+len(p[0])/20, reverse=True)
             self.root.after(0, lambda:self.selector.set_options(pairs))
+
+    def on_key(self, event):
+        if self.canvas_board.has_selected():
+            self.canvas_board.on_key(event)
+        else:
+            self.letter_bar.on_key(event)
+            
+    def on_back(self, event):
+        if self.canvas_board.has_selected():
+            self.canvas_board.on_back(event)
+        else:
+            self.letter_bar.on_back(event)
 
     def handle_close(self):
         self.prog.stopping = True

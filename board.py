@@ -288,18 +288,28 @@ class Board:
             sides.append(follow_start[::-1]+string[it]+follow_end)
         return opt.extend_start(follow[::-1], sides)
 
+    def place_letter(self, i, j, letter, is_joker):
+        if i < 0 or i >= self.width() or j < 0 or j >= self.width():
+            return
+        self.front[i][j] = letter
+        self.jokers[i][j] = is_joker
+        
+    def remove_letter(self, i, j):
+        if i < 0 or i >= self.width() or j < 0 or j >= self.width():
+            return
+        self.front[i][j] = None
+        self.jokers[i][j] = False
+
     def place(self, opt):
         for k in range(len(opt)):
             if opt.main_pattern[k] != '_':
                 i,j = move_dir(opt.start, opt.direction, k)
-                self.front[i][j] = opt.main_pattern[k]
-                self.jokers[i][j] = opt.main_jokers[k]
+                self.place_letter(i, j, opt.main_pattern[k], opt.main_jokers[k])
 
     def clear_all(self):
         for i in range(15):
             for j in range(15):
-                self.front[i][j] = None
-                self.jokers[i][j] = False
+                self.remove_letter(i, j)
 
 
 
