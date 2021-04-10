@@ -42,7 +42,7 @@ class LetterCanvas(tk.Canvas):
                 L += [self.create_text(x+23, y+23, text=str(LETTER_POINTS[letter]), state='disabled', font=('Helvetica', '6'), fill=text_color)]
         else:
             i1 = self.create_rectangle(x,y, x+20, y+20, width=0, fill=color)
-            i2 = self.create_text(x+10, y+10, text=letter.upper(), state='disabled', font=('Helvetica', '10', 'bold'))
+            i2 = self.create_text(x+10, y+8, text=letter.upper(), state='disabled', font=('Helvetica', '10', 'bold'))
             L = [i1, i2]
         return L
 
@@ -55,10 +55,16 @@ class CanvasBoard(LetterCanvas):
         self.temp_letters = []
         self.displayed_opt = None
         self._setup()
+        
+    def to_cv_rect(self, x1, y1, x2, y2):
+        return self.to_cv_pos(x1, y1) + self.to_cv_pos(x2, y2)
+        
+    def to_cv_pos(self, x, y):
+        return 10+30*x, 10+30*y
 
     def _setup(self):
         # board back
-        self.create_rectangle(10,10,10+30*self.board.width(),10+30*self.board.height(), fill="#7db364", width=0)
+        self.create_rectangle(*self.to_cv_rect(0, 0, self.board.width(), self.board.height()), fill="#7db364", width=0)
         # special cells
         for i in range(self.board.height()):
             for j in range(self.board.width()):
@@ -72,7 +78,7 @@ class CanvasBoard(LetterCanvas):
                 elif self.board.back[i][j] == 'l2':
                     color = "#5a7fe6"
                 if color is not None:
-                    self.create_rectangle(10+30*j, 10+30*i, 40+30*j, 40+30*i, fill=color, width=0)
+                    self.create_rectangle(*self.to_cv_rect(j, i, j+1, i+1), fill=color, width=0)
                     L = []
                     if i>0:
                         L.append(3)
@@ -90,9 +96,9 @@ class CanvasBoard(LetterCanvas):
                         self.create_polygon(pts, fill=color, width=0)
         # lines
         for i in range(self.board.height()+1):
-            self.create_line(10, 10+30*i, 10+30*self.board.width(), 10+30*i, fill="#555555", width=2)
+            self.create_line(*self.to_cv_pos(0, i), *self.to_cv_pos(self.board.width(), i), fill="#555555", width=2)
         for j in range(self.board.width()+1):
-            self.create_line(10+30*j, 10, 10+30*j, 10+30*self.board.width(), fill="#555555", width=2)
+            self.create_line(*self.to_cv_pos(j, 0), *self.to_cv_pos(j, self.board.width()), fill="#555555", width=2)
 
     def update(self):
         for i in self.letters:
@@ -101,7 +107,7 @@ class CanvasBoard(LetterCanvas):
         for i in range(self.board.height()):
             for j in range(self.board.width()):
                 if self.board.front[i][j] is not None:
-                    self.letters += self.draw_letter(10+30*j, 10+30*i, self.board.front[i][j], joker=self.board.jokers[i][j])
+                    self.letters += self.draw_letter(*self.to_cv_pos(j, i), self.board.front[i][j], joker=self.board.jokers[i][j])
 
     def display_opt(self, opt):
         for i in self.temp_letters:
