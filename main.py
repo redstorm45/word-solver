@@ -46,7 +46,7 @@ class Prog:
         self.stopping = True
         if self.thread is not None:
             self.thread.join()
-            
+
     def try_stop_compute(self):
         self.stopping = True
         if self.stopped:
@@ -79,7 +79,7 @@ class Prog:
         def cb_intermediate(opt):
             self.cb_intermediate( (opt, self.board.get_score(opt)) )
         self.cb_options([])
-        
+
         opts = self.solver.get_options(self.board, self.matcher, letters, lambda:self.cb_progress(-1, 1), cb_stop, cb_intermediate)
         pairs = [(op, self.board.get_score(op)) for op in opts]
         self.cb_options(pairs)

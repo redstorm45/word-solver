@@ -10,8 +10,8 @@ from words import ALPHABET
 class Interface:
     def __init__(self, board):
         pass
-        
-        
+
+
 class ConsoleInterface(Interface):
     def __init__(self):
         pass
@@ -47,7 +47,7 @@ class LetterCanvas(tk.Canvas):
             i2 = self.create_text(x+10, y+12, text=letter.upper(), state='disabled', font=('Helvetica', '10', 'bold'))
             L = [i1, i2]
         return L
-        
+
     def draw_highlight(self, x, y):
         color = '#e3ca2b'
         i = self.create_rectangle(x, y, x+30, y+30, width=4, dash=(8,), outline=color)
@@ -63,26 +63,26 @@ class CanvasBoard(LetterCanvas):
         self.cb_select = None
         self.cb_invalidate = None
         self._setup()
-        
+
         self.bind('<Button-1>', self.on_click)
         self.selected = None
         self.select_tick = False
         self.select_offset = 0
-        
+
     def has_selected(self):
         return self.selected is not None
-        
+
     def deselect(self):
         if self.selected is not None:
             self.selected = None
             self.update()
-        
+
     def to_cv_rect(self, x1, y1, x2, y2):
         return self.to_cv_pos(x1, y1) + self.to_cv_pos(x2, y2)
-        
+
     def to_cv_pos(self, x, y):
         return 10+30*x, 10+30*y
-        
+
     def from_cv_pos(self, x, y):
         return (x-10)//30, (y-10)//30
 
@@ -132,7 +132,7 @@ class CanvasBoard(LetterCanvas):
             for j in range(self.board.width()):
                 if self.board.front[i][j] is not None:
                     self.letters += self.draw_letter(*self.to_cv_pos(j, i), self.board.front[i][j], joker=self.board.jokers[i][j])
-                    
+
         if self.selected is not None:
             i,j,index = self.selected
             L = self.draw_highlight(*self.to_cv_pos(j,i))
@@ -165,7 +165,7 @@ class CanvasBoard(LetterCanvas):
             if self.cb_select is not None:
                 self.cb_select()
             self.update()
-            
+
     def on_select_tick(self):
         if (not self.select_tick) or self.selected is None:
             self.select_tick = False
@@ -175,7 +175,7 @@ class CanvasBoard(LetterCanvas):
             self.select_offset = (self.select_offset +1) % 16
             self.itemconfig(_id, dashoff=self.select_offset)
         self.after(50, self.on_select_tick)
-        
+
     def on_key(self, event):
         if self.selected is None:
             return
@@ -204,7 +204,7 @@ class LetterBar(LetterCanvas):
         self.update_letters()
 
         self.bind('<Button-1>', self.on_click)
-        
+
     def deselect(self):
         self.selected = None
         self.update_letters()
@@ -287,7 +287,7 @@ class MultiOptionDisplay(LetterCanvas):
             full = opt.main_board[i] == '_'
             letter_ids += self.draw_letter(50+20*i, 30*index+5, text[i], full=full, small=True, joker=opt.main_jokers[i])
         return [back_id, text_id] + letter_ids
-    
+
     def draw_needed(self):
         top_prop, bot_prop = self.yview()
         top_index = math.floor(top_prop*len(self.current_options))
@@ -297,10 +297,10 @@ class MultiOptionDisplay(LetterCanvas):
                 pair = self.current_options[i][0]
                 L = self.draw_option(i, pair)
                 self.current_options[i] = (pair, L)
-    
+
     def update_scrollregion(self):
         self.configure(scrollregion="0 0 350 {}".format(len(self.current_options)*30))
-    
+
     def set_options(self, pairs):
         if len(pairs) == 0:
             print('clearing options')
@@ -315,7 +315,7 @@ class MultiOptionDisplay(LetterCanvas):
         for i, pair in enumerate(pairs):
             self.current_options.append((pair, self.draw_option(i, pair)))
         self.update_scrollregion()
-        
+
     def insert_option(self, pair, index, skip_scroll=False):
         for moved_pair, indexes in self.current_options[index:]:
             if indexes is None:
@@ -364,7 +364,7 @@ class OptionSelector(tk.Frame):
 
         self.cb_select = cb_select
         self.selected = None
-        
+
     def sort_key(self, pair):
         opt, pt = pair
         scores = {
@@ -380,7 +380,7 @@ class OptionSelector(tk.Frame):
     def set_options(self, pairs):
         pairs = sorted(pairs, key=self.sort_key)
         self.canvas.set_options(pairs)
-        
+
     def insert_option(self, pair, skip_scroll=False):
         if len(self.canvas.current_options) == 0:
             self.set_options([pair])
@@ -408,7 +408,7 @@ class OptionSelector(tk.Frame):
     def deselect(self):
         self.selected = None
         self.canvas.deselect()
-        
+
     def on_scroll(self, *args):
         if args[0] == 'moveto':
             self.canvas.yview_moveto(args[1])
@@ -437,7 +437,7 @@ class QuickOptionSelector(tk.Button):
         kwargs['command'] = self.show_options
         tk.Button.__init__(self, parent, *args, **kwargs)
         self.make_subframe()
-    
+
     def configure(self, *args, **kwargs):
         if 'options' in kwargs.keys():
             self.option_list = kwargs['options']
@@ -445,7 +445,7 @@ class QuickOptionSelector(tk.Button):
             del kwargs['options']
         kwargs['command'] = self.show_options
         tk.Button.configure(self, *args, **kwargs)
-        
+
     def make_subframe(self):
         self.subframe = tk.Frame(self.master, borderwidth=2, bg='#e2e3e4')
         self.subframe_grower = tk.Frame(self.subframe, width=100, height=0)
@@ -457,7 +457,7 @@ class QuickOptionSelector(tk.Button):
             bt.bind('<Button-1>', lambda ev:cb())
             self.option_widgets.append(bt)
         def set_active(e):
-            self.active = True 
+            self.active = True
         def set_inactive(e):
             self.active = False
             self.after(100, self.check_active)
@@ -465,11 +465,11 @@ class QuickOptionSelector(tk.Button):
         self.subframe.bind('<Leave>', set_inactive)
         self.bind('<Enter>', set_active)
         self.bind('<Leave>', set_inactive)
-        
+
     def show_options(self):
         self.configure(relief=tk.SUNKEN)
         self.subframe.place(anchor="sw", x=self.winfo_x(), y=self.winfo_y())
-        
+
     def check_active(self):
         if not self.active and self.subframe.winfo_ismapped():
             self.subframe.place_forget()
@@ -496,7 +496,7 @@ class GraphicalInterface(Interface):
 
         self.letter_bar = LetterBar(self.search_bar)
         self.letter_bar.pack(side=tk.LEFT)
-        
+
         self.search_button = tk.Button(self.search_bar, text='Go', command=self.handle_compute)
         self.search_button.pack(side=tk.LEFT)
         self.clear_button = tk.Button(self.search_bar, text="Clear", command=self.handle_clear)
@@ -529,12 +529,12 @@ class GraphicalInterface(Interface):
         self.progress = ttk.Progressbar(self.status, orient=tk.HORIZONTAL, length=350, mode='determinate')
         self.progress.configure(value=0)
         self.progress.pack(side=tk.LEFT)
-        
+
         self.canvas_board.cb_select = self.letter_bar.deselect
         self.canvas_board.cb_invalidate = self.handle_invalidate
         self.letter_bar.cb_select = self.canvas_board.deselect
         self.prog.cb_intermediate = self.handle_intermediate
-        
+
         self.progress_skip = 0
         self.progress_indeterminate = None
         self.invalid_board = True
@@ -542,7 +542,7 @@ class GraphicalInterface(Interface):
 
     def update_progress(self, pos, total):
         self.root.after(0, lambda :self._update_progress(pos, total))
-    
+
     def _update_progress(self, pos, total):
         if pos == -1:
             if self.progress_indeterminate is None:
@@ -574,7 +574,7 @@ class GraphicalInterface(Interface):
         else:
             self.root.after(0, lambda:self.selector.set_options(pairs))
         self.intermediate_batch = []
-            
+
     def handle_intermediate(self, pair):
         #self.selector.insert_option(pair)
         self.intermediate_batch.append(pair)
@@ -588,7 +588,7 @@ class GraphicalInterface(Interface):
             self.canvas_board.on_key(event)
         else:
             self.letter_bar.on_key(event)
-            
+
     def on_back(self, event):
         if self.canvas_board.has_selected():
             self.canvas_board.on_back(event)
@@ -601,7 +601,7 @@ class GraphicalInterface(Interface):
             self.root.destroy()
         else:
             self.root.after(10, self.handle_close)
-            
+
     def handle_try_compute(self, letters):
         if self.prog.try_stop_compute():
             self.invalid_board = False
@@ -642,10 +642,10 @@ class GraphicalInterface(Interface):
             self.canvas_board.update()
             self.letter_bar.remove_used(self.selector.selected)
             self.selector.set_options([])
-            
+
     def handle_invalidate(self):
         self.selector.set_options([])
-            
+
     def handle_import_csv_board(self):
         file_ = tk_filedialog.askopenfile(master=self.root, title="Select file to load", filetypes=[('Csv', '.csv')])
         if file_ is None:
@@ -665,7 +665,7 @@ class GraphicalInterface(Interface):
                     self.prog.board.front[i][j] = cell
         self.canvas_board.update()
         file_.close()
-            
+
     def handle_export_csv_board(self):
         file_ = tk_filedialog.asksaveasfile(master=self.root, title="Select save location", defaultextension='csv', initialfile='board.csv', filetypes=[('Csv', '.csv')])
         for i in range(self.prog.board.height()):

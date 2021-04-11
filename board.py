@@ -293,7 +293,7 @@ class Board:
             return
         self.front[i][j] = letter
         self.jokers[i][j] = is_joker
-        
+
     def remove_letter(self, i, j):
         if i < 0 or i >= self.width() or j < 0 or j >= self.width():
             return
