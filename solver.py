@@ -4,7 +4,7 @@ class Solver:
     def __init__(self):
         pass
 
-    def get_options(self, board, matcher, letters, cb_step=None, cb_stop=None):
+    def get_options(self, board, matcher, letters, cb_step=None, cb_stop=None, cb_intermediate=None):
         '''
         Gives out all placement options on the board using some or all the letters
         '''
@@ -33,6 +33,8 @@ class Solver:
                 temp_opt = opt.complete(poss.letter, is_joker)
                 if poss.complete and temp_opt not in place_options:
                     place_options.append(temp_opt)
+                    if cb_intermediate is not None:
+                        cb_intermediate(temp_opt)
                 if len(available_letters) == 1:
                     continue
                 if poss.extendable_end:

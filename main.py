@@ -17,6 +17,7 @@ class Prog:
 
         self.cb_progress = None
         self.cb_options = None
+        self.cb_intermediate = None
 
     def attach_interface(self, cb_progress, cb_options):
         self.cb_progress = cb_progress
@@ -75,9 +76,11 @@ class Prog:
             self.cb_progress(-1, 30)
         def cb_stop():
             return self.stopping
+        def cb_intermediate(opt):
+            self.cb_intermediate( (opt, self.board.get_score(opt)) )
         self.cb_options([])
         
-        opts = self.solver.get_options(self.board, self.matcher, letters, lambda:self.cb_progress(-1, 1), cb_stop)
+        opts = self.solver.get_options(self.board, self.matcher, letters, lambda:self.cb_progress(-1, 1), cb_stop, cb_intermediate)
         pairs = [(op, self.board.get_score(op)) for op in opts]
         self.cb_options(pairs)
         if self.cb_progress is not None:

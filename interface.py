@@ -1,5 +1,6 @@
 
 import time
+import math
 import tkinter as tk
 import tkinter.ttk as ttk
 import tkinter.filedialog as tk_filedialog
@@ -60,6 +61,7 @@ class CanvasBoard(LetterCanvas):
         self.temp_letters = []
         self.displayed_opt = None
         self.cb_select = None
+        self.cb_invalidate = None
         self._setup()
         
         self.bind('<Button-1>', self.on_click)
@@ -180,12 +182,16 @@ class CanvasBoard(LetterCanvas):
         if event.char in ALPHABET and len(event.char)>0:
             self.board.place_letter(*self.selected[:2], event.char, False)
             self.update()
+            if self.cb_invalidate:
+                self.cb_invalidate()
 
     def on_back(self, event):
         if self.selected is None:
             return
         self.board.remove_letter(*self.selected[:2])
         self.update()
+        if self.cb_invalidate:
+            self.cb_invalidate()
 
 class LetterBar(LetterCanvas):
     def __init__(self, parent):
@@ -282,14 +288,49 @@ class MultiOptionDisplay(LetterCanvas):
             letter_ids += self.draw_letter(50+20*i, 30*index+5, text[i], full=full, small=True, joker=opt.main_jokers[i])
         return [back_id, text_id] + letter_ids
     
+    def draw_needed(self):
+        top_prop, bot_prop = self.yview()
+        top_index = math.floor(top_prop*len(self.current_options))
+        bot_index = min(math.ceil(bot_prop*len(self.current_options)), len(self.current_options))-1
+        for i in range(top_index, bot_index):
+            if self.current_options[i][1] is None:
+                pair = self.current_options[i][0]
+                L = self.draw_option(i, pair)
+                self.current_options[i] = (pair, L)
+    
+    def update_scrollregion(self):
+        self.configure(scrollregion="0 0 350 {}".format(len(self.current_options)*30))
+    
     def set_options(self, pairs):
+        if len(pairs) == 0:
+            print('clearing options')
+        else:
+            print('setting to {} options'.format(len(pairs)))
         for pair, drawn in self.current_options:
+            if drawn is None:
+                continue
             for d in drawn:
                 self.delete(d)
         self.current_options = []
         for i, pair in enumerate(pairs):
             self.current_options.append((pair, self.draw_option(i, pair)))
-        self.configure(scrollregion="0 0 350 {}".format(len(pairs)*30))
+        self.update_scrollregion()
+        
+    def insert_option(self, pair, index, skip_scroll=False):
+        for moved_pair, indexes in self.current_options[index:]:
+            if indexes is None:
+                continue
+            for i in indexes:
+                self.move(i, 0, 30)
+        new_option = (pair, None)
+        self.current_options.insert(index, new_option)
+        if not skip_scroll:
+            currentindex = math.floor(self.yview()[0]*len(self.current_options))
+            self.update_scrollregion()
+            if currentindex > index:
+                newfrac = (currentindex+1)/len(self.current_options)
+                self.yview_moveto(newfrac)
+            self.draw_needed()
 
     def select(self, event):
         ycv = self.canvasy(event.y)
@@ -301,7 +342,8 @@ class MultiOptionDisplay(LetterCanvas):
 
     def deselect(self):
         for full_opt in self.current_options:
-            self.itemconfigure(full_opt[1][0], state='hidden')
+            if full_opt[1] is not None:
+                self.itemconfigure(full_opt[1][0], state='hidden')
 
 
 class OptionSelector(tk.Frame):
@@ -311,26 +353,72 @@ class OptionSelector(tk.Frame):
         self.scrollbar.pack(fill=tk.Y, side=tk.RIGHT, expand=True)
         self.canvas = MultiOptionDisplay(self, cb_select=self.handle_select, bd=0, highlightthickness=0, yscrollcommand=self.scrollbar.set)
         self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        self.scrollbar.config(command=self.canvas.yview)
+        self.scrollbar.config(command=self.on_scroll)
 
         # reset the view
         self.canvas.xview_moveto(0)
         self.canvas.yview_moveto(0)
 
         self.drawn = []
+        self.sort_mode = ('Rpoints', 'Rlength', 'alphabet')
 
         self.cb_select = cb_select
         self.selected = None
+        
+    def sort_key(self, pair):
+        opt, pt = pair
+        scores = {
+            'points': pt,
+            'Rpoints': -pt,
+            'length': len(opt),
+            'Rlength': -len(opt),
+            'alphabet': opt.combined_main(),
+            'Ralphabet': tuple(-ord(e) for e in opt.combined_main()),
+        }
+        return tuple(scores[key] for key in self.sort_mode)
 
     def set_options(self, pairs):
+        pairs = sorted(pairs, key=self.sort_key)
         self.canvas.set_options(pairs)
+        
+    def insert_option(self, pair, skip_scroll=False):
+        if len(self.canvas.current_options) == 0:
+            self.set_options([pair])
+        else:
+            mini = 0, self.sort_key(self.canvas.current_options[0][0])
+            maxi = len(self.canvas.current_options)-1, self.sort_key(self.canvas.current_options[-1][0])
+            itemkey = self.sort_key(pair)
+            if itemkey < mini[1]:
+                self.canvas.insert_option(pair, 0, skip_scroll)
+            elif itemkey >= maxi[1]:
+                self.canvas.insert_option(pair, len(self.canvas.current_options), skip_scroll)
+            else:
+                while maxi[0] - mini[0] > 1:
+                    mid = (maxi[0] + mini[0])//2
+                    midkey = self.sort_key(self.canvas.current_options[mid][0])
+                    if itemkey == midkey:
+                        maxi = (mid, midkey)
+                        break
+                    elif itemkey > midkey:
+                        mini = (mid, midkey)
+                    else:
+                        maxi = (mid, midkey)
+                self.canvas.insert_option(pair, maxi[0], skip_scroll)
 
     def deselect(self):
         self.selected = None
         self.canvas.deselect()
+        
+    def on_scroll(self, *args):
+        if args[0] == 'moveto':
+            self.canvas.yview_moveto(args[1])
+            self.canvas.draw_needed()
+        elif args[0] == 'scroll':
+            self.canvas.yview_scroll(args[1], args[2])
+            self.canvas.draw_needed()
 
     def scroll(self, delta):
-        self.canvas.yview_scroll(delta, "units")
+        self.on_scroll('scroll', delta, 'units')
 
     def handle_select(self, opt):
         self.deselect()
@@ -443,11 +531,14 @@ class GraphicalInterface(Interface):
         self.progress.pack(side=tk.LEFT)
         
         self.canvas_board.cb_select = self.letter_bar.deselect
+        self.canvas_board.cb_invalidate = self.handle_invalidate
         self.letter_bar.cb_select = self.canvas_board.deselect
+        self.prog.cb_intermediate = self.handle_intermediate
         
         self.progress_skip = 0
         self.progress_indeterminate = None
         self.invalid_board = True
+        self.intermediate_batch = []
 
     def update_progress(self, pos, total):
         self.root.after(0, lambda :self._update_progress(pos, total))
@@ -481,8 +572,16 @@ class GraphicalInterface(Interface):
         if self.invalid_board:
             self.root.after(0, lambda:self.selector.set_options([]))
         else:
-            pairs = sorted(pairs, key=lambda p:p[1]+len(p[0])/20, reverse=True)
             self.root.after(0, lambda:self.selector.set_options(pairs))
+        self.intermediate_batch = []
+            
+    def handle_intermediate(self, pair):
+        #self.selector.insert_option(pair)
+        self.intermediate_batch.append(pair)
+        if len(self.intermediate_batch) > 500:
+            for i, pair_ in enumerate(self.intermediate_batch):
+                self.selector.insert_option(pair_, i+1<500)
+            self.intermediate_batch = []
 
     def on_key(self, event):
         if self.canvas_board.has_selected():
@@ -506,6 +605,7 @@ class GraphicalInterface(Interface):
     def handle_try_compute(self, letters):
         if self.prog.try_stop_compute():
             self.invalid_board = False
+            self.selector.set_options([])
             self.prog.launch_compute(letters)
         else:
             self.root.after(10, lambda:self.handle_try_compute(letters))
